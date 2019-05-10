@@ -10,6 +10,7 @@
 #include "utility.h"
 #include "SystemTickCounter.h"
 
+
 // If you want to connect IoT DevKit to an IoT Edge device which has been configured to a
 // transparent gateway (https://docs.microsoft.com/en-us/azure/iot-edge/how-to-create-transparent-gateway) 
 // as a leaf device (https://docs.microsoft.com/en-us/azure/iot-edge/how-to-connect-downstream-device),
