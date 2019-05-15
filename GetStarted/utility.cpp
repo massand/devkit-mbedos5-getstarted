@@ -101,6 +101,7 @@ float readHumidity()
 
 bool readMessage(int messageId, char *payload)
 {
+
     JSON_Value *root_value = json_value_init_object();
     JSON_Object *root_object = json_value_get_object(root_value);
     char *serialized_string = NULL;

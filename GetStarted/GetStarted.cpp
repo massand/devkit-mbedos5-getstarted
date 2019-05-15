@@ -9,7 +9,7 @@
 #include "config.h"
 #include "utility.h"
 #include "SystemTickCounter.h"
-
+#include "arduino/devkit-sdk/AZ3166/src/cores/arduino/cli/console_cli.h"
 
 // If you want to connect IoT DevKit to an IoT Edge device which has been configured to a
 // transparent gateway (https://docs.microsoft.com/en-us/azure/iot-edge/how-to-create-transparent-gateway) 
@@ -32,6 +32,7 @@ static uint64_t send_interval_ms;
 
 //////////////////////////////////////////////////////////////////////////////////////////////////////////
 // Utilities
+
 static void InitWifi()
 {
   Screen.print(2, "Connecting...");
@@ -44,9 +45,10 @@ static void InitWifi()
     Screen.print(2, "Running... \r\n");
   }
   else
-  {
+  {    
     hasWifi = false;
-    Screen.print(1, "No Wi-Fi\r\n ");
+    Screen.print(1, "No Wi-Fi\r\n");
+
   }
 }
 
@@ -108,7 +110,10 @@ static int  DeviceMethodCallback(const char *methodName, const unsigned char *pa
 
 static void IniTIoTClient()
 {
+  const char* const OPTION_LOG_TRACES = "logtrace";
+  bool traceOn = true;
   DevKitMQTTClient_SetOption(OPTION_MINI_SOLUTION_NAME, "GetStarted");
+  DevKitMQTTClient_SetOption(OPTION_LOG_TRACES, &traceOn);
 #if defined(PLAY_AS_LEAF_DEVICE)
   DevKitMQTTClient_SetOption("TrustedCerts", edgeCert);
 #endif // PLAY_AS_LEAF_DEVICE
@@ -119,6 +124,7 @@ static void IniTIoTClient()
   DevKitMQTTClient_SetDeviceMethodCallback(DeviceMethodCallback);
 
   send_interval_ms = SystemTickCounterRead();
+  Screen.print(3, " > Done");
 }
 
 //////////////////////////////////////////////////////////////////////////////////////////////////////////
@@ -130,8 +136,9 @@ void setup()
   Screen.print(2, "Initializing...");
   
   Screen.print(3, " > Serial");
+
   Serial.begin(115200);
-  
+
   // Initialize the WiFi module
   Screen.print(3, " > WiFi");
   hasWifi = false;
@@ -152,25 +159,26 @@ void setup()
 
 void loop()
 {
-  if (hasWifi)
-  {
-    if (messageSending && 
-        (int)(SystemTickCounterRead() - send_interval_ms) >= getInterval())
-    {
-      // Send teperature data
-      char messagePayload[MESSAGE_MAX_LEN];
+  cli_main();
+  // if (hasWifi)
+  // {
+  //   if (messageSending && 
+  //       (int)(SystemTickCounterRead() - send_interval_ms) >= getInterval())
+  //   {
+  //     // Send teperature data
+  //     char messagePayload[MESSAGE_MAX_LEN];
 
-      bool temperatureAlert = readMessage(messageCount++, messagePayload);
-      EVENT_INSTANCE* message = DevKitMQTTClient_Event_Generate(messagePayload, MESSAGE);
-      DevKitMQTTClient_Event_AddProp(message, "temperatureAlert", temperatureAlert ? "true" : "false");
-      DevKitMQTTClient_SendEventInstance(message);
+  //     bool temperatureAlert = readMessage(messageCount++, messagePayload);
+  //     EVENT_INSTANCE* message = DevKitMQTTClient_Event_Generate(messagePayload, MESSAGE);
+  //     DevKitMQTTClient_Event_AddProp(message, "temperatureAlert", temperatureAlert ? "true" : "false");
+  //     DevKitMQTTClient_SendEventInstance(message);
       
-      send_interval_ms = SystemTickCounterRead();
-    }
-    else
-    {
-      DevKitMQTTClient_Check();
-    }
-  }
+  //     send_interval_ms = SystemTickCounterRead();
+  //   }
+  //   else
+  //   {
+  //     DevKitMQTTClient_Check();
+  //   }
+  // }
   delay(10);
 }
