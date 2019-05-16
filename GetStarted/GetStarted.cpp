@@ -117,7 +117,7 @@ static void IniTIoTClient()
 #if defined(PLAY_AS_LEAF_DEVICE)
   DevKitMQTTClient_SetOption("TrustedCerts", edgeCert);
 #endif // PLAY_AS_LEAF_DEVICE
-  DevKitMQTTClient_Init();
+  DevKitMQTTClient_Init(false, traceOn);
   DevKitMQTTClient_SetSendConfirmationCallback(SendConfirmationCallback);
   DevKitMQTTClient_SetMessageCallback(MessageCallback);
   DevKitMQTTClient_SetDeviceTwinCallback(DeviceTwinCallback);
@@ -155,6 +155,8 @@ void setup()
 
   Screen.print(3, " > IoT Hub");
   IniTIoTClient();
+  
+  Serial.print("Setup complete\r\n");
 }
 
 void loop()
