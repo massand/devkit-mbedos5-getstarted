@@ -9,7 +9,8 @@
 #include "config.h"
 #include "utility.h"
 #include "SystemTickCounter.h"
-#include "arduino/devkit-sdk/AZ3166/src/cores/arduino/cli/console_cli.h"
+#include "azure_test_firmware_cli.h"
+#include "azure_test_firmware_error.h"
 
 // If you want to connect IoT DevKit to an IoT Edge device which has been configured to a
 // transparent gateway (https://docs.microsoft.com/en-us/azure/iot-edge/how-to-create-transparent-gateway) 
@@ -36,7 +37,7 @@ static uint64_t send_interval_ms;
 static void InitWifi()
 {
   Screen.print(2, "Connecting...");
-  
+
   if (WiFi.begin() == WL_CONNECTED)
   {
     IPAddress ip = WiFi.localIP();
@@ -45,11 +46,12 @@ static void InitWifi()
     Screen.print(2, "Running... \r\n");
   }
   else
-  {    
+  {
     hasWifi = false;
     Screen.print(1, "No Wi-Fi\r\n");
 
   }
+
 }
 
 static void SendConfirmationCallback(IOTHUB_CLIENT_CONFIRMATION_RESULT result)
@@ -79,7 +81,7 @@ static void DeviceTwinCallback(DEVICE_TWIN_UPDATE_STATE updateState, const unsig
   free(temp);
 }
 
-static int  DeviceMethodCallback(const char *methodName, const unsigned char *payload, int size, unsigned char **response, int *response_size)
+static int DeviceMethodCallback(const char *methodName, const unsigned char *payload, int size, unsigned char **response, int *response_size)
 {
   LogInfo("Try to invoke method %s", methodName);
   const char *responseMessage = "\"Successfully invoke device method\"";
@@ -108,7 +110,7 @@ static int  DeviceMethodCallback(const char *methodName, const unsigned char *pa
   return result;
 }
 
-static void IniTIoTClient()
+static bool IniTIoTClient()
 {
   const char* const OPTION_LOG_TRACES = "logtrace";
   bool traceOn = true;
@@ -117,7 +119,11 @@ static void IniTIoTClient()
 #if defined(PLAY_AS_LEAF_DEVICE)
   DevKitMQTTClient_SetOption("TrustedCerts", edgeCert);
 #endif // PLAY_AS_LEAF_DEVICE
-  DevKitMQTTClient_Init(false, traceOn);
+  if(!DevKitMQTTClient_Init(false, traceOn))
+  {
+    return false;
+  }
+
   DevKitMQTTClient_SetSendConfirmationCallback(SendConfirmationCallback);
   DevKitMQTTClient_SetMessageCallback(MessageCallback);
   DevKitMQTTClient_SetDeviceTwinCallback(DeviceTwinCallback);
@@ -125,6 +131,7 @@ static void IniTIoTClient()
 
   send_interval_ms = SystemTickCounterRead();
   Screen.print(3, " > Done");
+  return true;
 }
 
 //////////////////////////////////////////////////////////////////////////////////////////////////////////
@@ -145,23 +152,30 @@ void setup()
   InitWifi();
   if (!hasWifi)
   {
-    return;
+    Serial.print(wifi_failure);
+    // return;
   }
 
   LogTrace("HappyPathSetup", NULL);
 
   Screen.print(3, " > Sensors");
-  SensorInit();
+  if (SensorInit()) //SensorInit returns 0 if successful
+  {
+    Serial.print(sensor_init_failure);
+  }
 
   Screen.print(3, " > IoT Hub");
-  IniTIoTClient();
+  if(!IniTIoTClient())
+  {
+    Serial.print(iot_init_failure);
+  }
   
   Serial.print("Setup complete\r\n");
 }
 
 void loop()
 {
-  cli_main();
+  test_cli_main();
   // if (hasWifi)
   // {
   //   if (messageSending && 

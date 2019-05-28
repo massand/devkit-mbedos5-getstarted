@@ -72,11 +72,11 @@ void parseTwinMessage(DEVICE_TWIN_UPDATE_STATE updateState, const char *message)
     json_value_free(root_value);
 }
 
-void SensorInit()
+int SensorInit()
 {
     i2c = new DevI2C(D14, D15);
     sensor = new HTS221Sensor(*i2c);
-    sensor->init(NULL);
+    return sensor->init(NULL);
 }
 
 float readTemperature()
