@@ -28,6 +28,31 @@ void blinkLED()
     rgbLed.turnOff();
 }
 
+void blinkRED()
+{
+    rgbLed.turnOff();
+    rgbLed.setColor(255, 0, 0);
+    delay(1000);
+    rgbLed.turnOff();
+}
+
+void blinkGREEN()
+{
+    rgbLed.turnOff();
+    rgbLed.setColor(0, 255, 0);
+    delay(1000);
+    rgbLed.turnOff();
+}
+
+void blinkBLUE()
+{
+    rgbLed.turnOff();
+    rgbLed.setColor(0, 0, 255);
+    delay(1000);
+    rgbLed.turnOff();
+}
+
+
 void blinkSendConfirmation()
 {
     rgbLed.turnOff();

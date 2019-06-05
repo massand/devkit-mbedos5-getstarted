@@ -10,6 +10,10 @@ bool readMessage(int, char *);
 int SensorInit(void);
 
 void blinkLED(void);
+void blinkRED(void);
+void blinkBLUE(void);
+void blinkGREEN(void);
+
 void blinkSendConfirmation(void);
 int getInterval(void);
 

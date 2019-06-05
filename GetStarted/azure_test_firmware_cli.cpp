@@ -56,6 +56,7 @@ static void az_iothub_command(int argc, char **argv);
 static void dps_uds_command(int argc, char **argv);
 static void enable_secure_command(int argc, char **argv);
 static void output_telemetry_command(int argc, char **argv);
+static void blink_red_led_command(int argc, char **argv);
 
 static const struct console_command cmds[] = {
   {"help",          "Help document",                                            false, help_command},
@@ -67,7 +68,8 @@ static const struct console_command cmds[] = {
   {"set_az_iothub", "Set the connection string of Microsoft Azure IoT Hub",     true, az_iothub_command},
   {"set_dps_uds",   "Set DPS Unique Device Secret (DPS)",                       true,  dps_uds_command},
   {"enable_secure", "Enable secure channel between AZ3166 and secure chip",     false, enable_secure_command},
-  {"send_telemetry", "Send telemetry to IoT Hub, and output to serial",         false, output_telemetry_command},
+  {"send_telemetry","Send telemetry to IoT Hub, and output to serial",          false, output_telemetry_command},
+  {"blink", "Turn on RGB LED for 1 seconds, args are red, blue, green, none is red", false, blink_red_led_command},
 };
 
 static const int cmd_count = sizeof(cmds) / sizeof(struct console_command);
@@ -334,6 +336,23 @@ static void output_telemetry_command(int argc, char **argv)
     DevKitMQTTClient_SendEventInstance(message);
     Serial.printf("%s\r\n", messagePayload);
 
+}
+
+static void blink_red_led_command(int argc, char **argv)
+{
+    if (strcmp(argv[1], "blue") == 0)
+    {
+        blinkBLUE();
+    }
+    else if (strcmp(argv[1], "green") == 0)
+    {
+        blinkGREEN();
+    }
+    else
+    {
+        blinkRED();
+    }
+    Serial.printf("blunked.\r\n");
 }
 
 ////////////////////////////////////////////////////////////////////////////////////
