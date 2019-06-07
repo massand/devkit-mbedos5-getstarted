@@ -404,7 +404,7 @@ static bool get_input(char *inbuf, unsigned int *bp)
         
         if (inbuf[*bp] == RET_CHAR)//END_CHAR) 
         {
-            Serial.printf("\r\nWhat we have: %s", inbuf);
+            // Serial.printf("\r\nWhat we have: %s", inbuf);
             /* end of input line */
             inbuf[*bp] = NULL_CHAR;
             *bp = 0;
