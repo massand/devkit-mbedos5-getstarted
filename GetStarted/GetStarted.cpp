@@ -5,6 +5,7 @@
 #include "AZ3166WiFi.h"
 #include "AzureIotHub.h"
 #include "DevKitMQTTClient.h"
+// #include "EMW10xxInterface.h"
 
 #include "config.h"
 #include "utility.h"
@@ -26,10 +27,13 @@ static const char edgeCert [] =
 "-----END CERTIFICATE-----\r\n";
 #endif // PLAY_AS_LEAF_DEVICE
 
+bool IoTHubConnectionEstablished = false;
+
 static bool hasWifi = false;
 int messageCount = 1;
 static bool messageSending = true;
 static uint64_t send_interval_ms;
+
 
 //////////////////////////////////////////////////////////////////////////////////////////////////////////
 // Utilities
@@ -38,6 +42,9 @@ static void InitWifi()
 {
   Screen.print(2, "Connecting...");
 
+  // NetworkInterface* defaultSystemNetwork = (NetworkInterface*)new EMW10xxInterface();
+  // Serial.printf("mac address %s", defaultSystemNetwork->get_mac_address());
+  // free(defaultSystemNetwork);
   if (WiFi.begin() == WL_CONNECTED)
   {
     IPAddress ip = WiFi.localIP();
@@ -52,6 +59,20 @@ static void InitWifi()
 
   }
 
+}
+
+static void SetConnectionStatusCallback(IOTHUB_CLIENT_CONNECTION_STATUS result, IOTHUB_CLIENT_CONNECTION_STATUS_REASON reason)
+{
+  if (result == IOTHUB_CLIENT_CONNECTION_AUTHENTICATED)
+  {
+    IoTHubConnectionEstablished = true;
+    Serial.print("IoT Hub connection established.\r\n");
+  }
+  else
+  {
+    IoTHubConnectionEstablished = false;
+    Serial.print("IoT Hub connection failed.\r\n");
+  }  
 }
 
 static void SendConfirmationCallback(IOTHUB_CLIENT_CONFIRMATION_RESULT result)
@@ -119,6 +140,8 @@ static bool IniTIoTClient()
 #if defined(PLAY_AS_LEAF_DEVICE)
   DevKitMQTTClient_SetOption("TrustedCerts", edgeCert);
 #endif // PLAY_AS_LEAF_DEVICE
+  DevKitMQTTClient_SetConnectionStatusCallback(SetConnectionStatusCallback);
+
   if(!DevKitMQTTClient_Init(false, traceOn))
   {
     return false;

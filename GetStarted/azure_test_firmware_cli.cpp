@@ -9,6 +9,7 @@
 #include "SystemVersion.h"
 #include "UARTClass.h"
 #include "azure_test_firmware_cli.h"
+#include "azure_test_firmware_error.h"
 #include "Telemetry/Telemetry.h"
 #include "AzureIotHub.h"
 #include "DevKitMQTTClient.h"
@@ -41,8 +42,8 @@ struct console_command
 ////////////////////////////////////////////////////////////////////////////////////
 // System functions
 extern UARTClass Serial;
-
 uint16_t telemCount = 0;
+uint8_t  telemRetry = 0;
 
 ////////////////////////////////////////////////////////////////////////////////////
 // Commands table
@@ -235,6 +236,11 @@ static void az_iothub_command(int argc, char **argv)
     {
         Serial.printf("INFO: Set Azure Iot hub connection string successfully.\r\n");
     }
+    // if(!DevKitMQTTClient_Init(false, true))
+    // {
+    //     Serial.print(iot_init_failure);
+    // }
+
 }
 
 static void dps_uds_command(int argc, char **argv)
@@ -327,15 +333,32 @@ static void output_telemetry_command(int argc, char **argv)
 {
     SystemTickCounterRead();
 
-    // Send teperature data
-    char messagePayload[MESSAGE_MAX_LEN];
-    
-    bool temperatureAlert = readMessage((int)telemCount++, messagePayload);
-    EVENT_INSTANCE* message = DevKitMQTTClient_Event_Generate(messagePayload, MESSAGE);
-    DevKitMQTTClient_Event_AddProp(message, "temperatureAlert", temperatureAlert ? "true" : "false");
-    DevKitMQTTClient_SendEventInstance(message);
-    Serial.printf("%s\r\n", messagePayload);
-
+    if (IoTHubConnectionEstablished)
+    {
+        telemRetry = 0;
+        // Send teperature data
+        char messagePayload[MESSAGE_MAX_LEN];
+        
+        bool temperatureAlert = readMessage((int)telemCount++, messagePayload);
+        EVENT_INSTANCE* message = DevKitMQTTClient_Event_Generate(messagePayload, MESSAGE);
+        DevKitMQTTClient_Event_AddProp(message, "temperatureAlert", temperatureAlert ? "true" : "false");
+        DevKitMQTTClient_SendEventInstance(message);
+        Serial.printf("%s\r\n", messagePayload);
+    }
+    else
+    {
+        telemRetry++;
+        if (!(telemRetry > 5))
+        {
+            wait_ms(200);
+            output_telemetry_command(argc, argv);
+        }
+        else
+        {
+            Serial.print(iot_init_failure);
+        }
+        
+    }
 }
 
 static void blink_red_led_command(int argc, char **argv)
