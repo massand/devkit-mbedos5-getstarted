@@ -332,33 +332,29 @@ static void enable_secure_command(int argc, char **argv)
 static void output_telemetry_command(int argc, char **argv)
 {
     SystemTickCounterRead();
-
-    if (IoTHubConnectionEstablished)
-    {
-        telemRetry = 0;
-        // Send teperature data
-        char messagePayload[MESSAGE_MAX_LEN];
-        
-        bool temperatureAlert = readMessage((int)telemCount++, messagePayload);
-        EVENT_INSTANCE* message = DevKitMQTTClient_Event_Generate(messagePayload, MESSAGE);
-        DevKitMQTTClient_Event_AddProp(message, "temperatureAlert", temperatureAlert ? "true" : "false");
-        DevKitMQTTClient_SendEventInstance(message);
-        Serial.printf("%s\r\n", messagePayload);
-    }
-    else
+    telemRetry = 0;
+    
+    while(!IoTHubConnectionEstablished)
     {
         telemRetry++;
-        if (!(telemRetry > 5))
-        {
-            wait_ms(200);
-            output_telemetry_command(argc, argv);
-        }
-        else
+        wait_ms(200);
+        
+        if (telemRetry > 5)
         {
             Serial.print(iot_init_failure);
-        }
-        
+            return;
+        }        
     }
+
+    // Send temperature data
+    char messagePayload[MESSAGE_MAX_LEN];
+    
+    bool temperatureAlert = readMessage((int)telemCount++, messagePayload);
+    EVENT_INSTANCE* message = DevKitMQTTClient_Event_Generate(messagePayload, MESSAGE);
+    DevKitMQTTClient_Event_AddProp(message, "temperatureAlert", temperatureAlert ? "true" : "false");
+    DevKitMQTTClient_SendEventInstance(message);
+    Serial.printf("%s\r\n", messagePayload);
+    
 }
 
 static void blink_red_led_command(int argc, char **argv)
