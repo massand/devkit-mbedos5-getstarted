@@ -1,6 +1,6 @@
-[submodule "mbed-os"]
-	path = mbed-os
-	url = https://github.com/VSChina/mbed-os
 [submodule "mbed-iot-devkit-sdk"]
 	path = mbed-iot-devkit-sdk
 	url = https://github.com/jbobotek/mbed-iot-devkit-sdk
+[submodule "mbed-os"]
+	path = mbed-os
+	url = https://github.com/jbobotek/mbed-os.git
