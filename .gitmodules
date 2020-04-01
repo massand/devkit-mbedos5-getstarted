@@ -3,4 +3,4 @@
 	url = https://github.com/jbobotek/mbed-iot-devkit-sdk
 [submodule "mbed-os"]
 	path = mbed-os
-	url = https://mseng@dev.azure.com/mseng/VSIoT/_git/mbed-os
+	url = https://azure-iot-sdks@dev.azure.com/mseng/VSIoT/_git/mbed-os
