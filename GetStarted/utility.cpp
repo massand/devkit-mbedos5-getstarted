@@ -28,6 +28,31 @@ void blinkLED()
     rgbLed.turnOff();
 }
 
+void blinkRED()
+{
+    rgbLed.turnOff();
+    rgbLed.setColor(255, 0, 0);
+    delay(1000);
+    rgbLed.turnOff();
+}
+
+void blinkGREEN()
+{
+    rgbLed.turnOff();
+    rgbLed.setColor(0, 255, 0);
+    delay(1000);
+    rgbLed.turnOff();
+}
+
+void blinkBLUE()
+{
+    rgbLed.turnOff();
+    rgbLed.setColor(0, 0, 255);
+    delay(1000);
+    rgbLed.turnOff();
+}
+
+
 void blinkSendConfirmation()
 {
     rgbLed.turnOff();
@@ -72,11 +97,11 @@ void parseTwinMessage(DEVICE_TWIN_UPDATE_STATE updateState, const char *message)
     json_value_free(root_value);
 }
 
-void SensorInit()
+int SensorInit()
 {
     i2c = new DevI2C(D14, D15);
     sensor = new HTS221Sensor(*i2c);
-    sensor->init(NULL);
+    return sensor->init(NULL);
 }
 
 float readTemperature()
@@ -101,6 +126,7 @@ float readHumidity()
 
 bool readMessage(int messageId, char *payload)
 {
+
     JSON_Value *root_value = json_value_init_object();
     JSON_Object *root_object = json_value_get_object(root_value);
     char *serialized_string = NULL;

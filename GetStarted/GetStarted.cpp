@@ -5,10 +5,13 @@
 #include "AZ3166WiFi.h"
 #include "AzureIotHub.h"
 #include "DevKitMQTTClient.h"
+// #include "EMW10xxInterface.h"
 
 #include "config.h"
 #include "utility.h"
 #include "SystemTickCounter.h"
+#include "azure_test_firmware_cli.h"
+#include "azure_test_firmware_error.h"
 
 // If you want to connect IoT DevKit to an IoT Edge device which has been configured to a
 // transparent gateway (https://docs.microsoft.com/en-us/azure/iot-edge/how-to-create-transparent-gateway) 
@@ -24,17 +27,24 @@ static const char edgeCert [] =
 "-----END CERTIFICATE-----\r\n";
 #endif // PLAY_AS_LEAF_DEVICE
 
+bool IoTHubConnectionEstablished = false;
+
 static bool hasWifi = false;
 int messageCount = 1;
 static bool messageSending = true;
 static uint64_t send_interval_ms;
 
+
 //////////////////////////////////////////////////////////////////////////////////////////////////////////
 // Utilities
+
 static void InitWifi()
 {
   Screen.print(2, "Connecting...");
-  
+
+  // NetworkInterface* defaultSystemNetwork = (NetworkInterface*)new EMW10xxInterface();
+  // Serial.printf("mac address %s", defaultSystemNetwork->get_mac_address());
+  // free(defaultSystemNetwork);
   if (WiFi.begin() == WL_CONNECTED)
   {
     IPAddress ip = WiFi.localIP();
@@ -45,8 +55,24 @@ static void InitWifi()
   else
   {
     hasWifi = false;
-    Screen.print(1, "No Wi-Fi\r\n ");
+    Screen.print(1, "No Wi-Fi\r\n");
+
   }
+
+}
+
+static void SetConnectionStatusCallback(IOTHUB_CLIENT_CONNECTION_STATUS result, IOTHUB_CLIENT_CONNECTION_STATUS_REASON reason)
+{
+  if (result == IOTHUB_CLIENT_CONNECTION_AUTHENTICATED)
+  {
+    IoTHubConnectionEstablished = true;
+    Serial.print("IoT Hub connection established.\r\n");
+  }
+  else
+  {
+    IoTHubConnectionEstablished = false;
+    Serial.print("IoT Hub connection failed.\r\n");
+  }  
 }
 
 static void SendConfirmationCallback(IOTHUB_CLIENT_CONFIRMATION_RESULT result)
@@ -76,7 +102,7 @@ static void DeviceTwinCallback(DEVICE_TWIN_UPDATE_STATE updateState, const unsig
   free(temp);
 }
 
-static int  DeviceMethodCallback(const char *methodName, const unsigned char *payload, int size, unsigned char **response, int *response_size)
+static int DeviceMethodCallback(const char *methodName, const unsigned char *payload, int size, unsigned char **response, int *response_size)
 {
   LogInfo("Try to invoke method %s", methodName);
   const char *responseMessage = "\"Successfully invoke device method\"";
@@ -105,19 +131,30 @@ static int  DeviceMethodCallback(const char *methodName, const unsigned char *pa
   return result;
 }
 
-static void IniTIoTClient()
+static bool IniTIoTClient()
 {
+  const char* const OPTION_LOG_TRACES = "logtrace";
+  bool traceOn = true;
   DevKitMQTTClient_SetOption(OPTION_MINI_SOLUTION_NAME, "GetStarted");
+  DevKitMQTTClient_SetOption(OPTION_LOG_TRACES, &traceOn);
 #if defined(PLAY_AS_LEAF_DEVICE)
   DevKitMQTTClient_SetOption("TrustedCerts", edgeCert);
 #endif // PLAY_AS_LEAF_DEVICE
-  DevKitMQTTClient_Init();
+  DevKitMQTTClient_SetConnectionStatusCallback(SetConnectionStatusCallback);
+
+  if(!DevKitMQTTClient_Init(false, traceOn))
+  {
+    return false;
+  }
+
   DevKitMQTTClient_SetSendConfirmationCallback(SendConfirmationCallback);
   DevKitMQTTClient_SetMessageCallback(MessageCallback);
   DevKitMQTTClient_SetDeviceTwinCallback(DeviceTwinCallback);
   DevKitMQTTClient_SetDeviceMethodCallback(DeviceMethodCallback);
 
   send_interval_ms = SystemTickCounterRead();
+  Screen.print(3, " > Done");
+  return true;
 }
 
 //////////////////////////////////////////////////////////////////////////////////////////////////////////
@@ -129,47 +166,58 @@ void setup()
   Screen.print(2, "Initializing...");
   
   Screen.print(3, " > Serial");
+
   Serial.begin(115200);
-  
+
   // Initialize the WiFi module
   Screen.print(3, " > WiFi");
   hasWifi = false;
   InitWifi();
   if (!hasWifi)
   {
-    return;
+    Serial.print(wifi_failure);
+    // return;
   }
 
   LogTrace("HappyPathSetup", NULL);
 
   Screen.print(3, " > Sensors");
-  SensorInit();
+  if (SensorInit()) //SensorInit returns 0 if successful
+  {
+    Serial.print(sensor_init_failure);
+  }
 
   Screen.print(3, " > IoT Hub");
-  IniTIoTClient();
+  if(!IniTIoTClient())
+  {
+    Serial.print(iot_init_failure);
+  }
+  
+  Serial.print("Setup complete\r\n");
 }
 
 void loop()
 {
-  if (hasWifi)
-  {
-    if (messageSending && 
-        (int)(SystemTickCounterRead() - send_interval_ms) >= getInterval())
-    {
-      // Send teperature data
-      char messagePayload[MESSAGE_MAX_LEN];
+  test_cli_main();
+  // if (hasWifi)
+  // {
+  //   if (messageSending && 
+  //       (int)(SystemTickCounterRead() - send_interval_ms) >= getInterval())
+  //   {
+  //     // Send teperature data
+  //     char messagePayload[MESSAGE_MAX_LEN];
 
-      bool temperatureAlert = readMessage(messageCount++, messagePayload);
-      EVENT_INSTANCE* message = DevKitMQTTClient_Event_Generate(messagePayload, MESSAGE);
-      DevKitMQTTClient_Event_AddProp(message, "temperatureAlert", temperatureAlert ? "true" : "false");
-      DevKitMQTTClient_SendEventInstance(message);
+  //     bool temperatureAlert = readMessage(messageCount++, messagePayload);
+  //     EVENT_INSTANCE* message = DevKitMQTTClient_Event_Generate(messagePayload, MESSAGE);
+  //     DevKitMQTTClient_Event_AddProp(message, "temperatureAlert", temperatureAlert ? "true" : "false");
+  //     DevKitMQTTClient_SendEventInstance(message);
       
-      send_interval_ms = SystemTickCounterRead();
-    }
-    else
-    {
-      DevKitMQTTClient_Check();
-    }
-  }
+  //     send_interval_ms = SystemTickCounterRead();
+  //   }
+  //   else
+  //   {
+  //     DevKitMQTTClient_Check();
+  //   }
+  // }
   delay(10);
 }
